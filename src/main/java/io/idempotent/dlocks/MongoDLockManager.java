@@ -1,5 +1,7 @@
 package io.idempotent.dlocks;
 
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.ReadConcern;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClient;
@@ -9,19 +11,29 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.result.InsertOneResult;
-import org.bson.types.ObjectId;
+import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.codecs.pojo.PojoCodecProvider;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-public class MongoDLockManager implements DLockManager<MongoDLock>, AutoCloseable {
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
+import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
+
+public class MongoDLockManager implements DLockManager, AutoCloseable {
     private final MongoClient mongoClient;
     private final MongoDatabase db;
     private final MongoCollection<MongoDLock> coll;
     private final String ownerId;
 
     public MongoDLockManager(String mongoConnectionStr, String dbName, String collName, String ownerId) {
-        mongoClient = MongoClients.create(mongoConnectionStr);
+        CodecRegistry pojoCodecRegistry = fromRegistries(MongoClientSettings.getDefaultCodecRegistry(),
+                fromProviders(PojoCodecProvider.builder().automatic(true).build()));
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .codecRegistry(pojoCodecRegistry)
+                .applyConnectionString(new ConnectionString(mongoConnectionStr)).build();
+        mongoClient = MongoClients.create(settings);
         db = mongoClient.getDatabase(dbName);
         coll = db.withReadConcern(ReadConcern.LINEARIZABLE)
                 .withWriteConcern(WriteConcern.MAJORITY)
@@ -37,15 +49,22 @@ public class MongoDLockManager implements DLockManager<MongoDLock>, AutoCloseabl
         coll.createIndex(Indexes.ascending("renewedAt"), options);
     }
 
-    public MongoDLock tryAcquire(String lockId) {
+    public boolean tryAcquire(String lockId) {
         Date now = new Date();
-        MongoDLock lockDoc = new MongoDLock(new ObjectId(lockId), ownerId, now, now);
+        MongoDLock lockDoc = new MongoDLock(lockId, ownerId, now, now);
 
         InsertOneResult result = coll.insertOne(lockDoc);
-        if (!result.wasAcknowledged()) {
-            return null;
-        }
-        return lockDoc;
+        return result.wasAcknowledged();
+    }
+
+    @Override
+    public void renew(Duration duration) {
+
+    }
+
+    @Override
+    public void release() {
+
     }
 
     @Override

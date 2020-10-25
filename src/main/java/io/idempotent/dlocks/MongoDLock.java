@@ -2,43 +2,20 @@ package io.idempotent.dlocks;
 
 import org.bson.types.ObjectId;
 
-import java.time.Duration;
 import java.util.Date;
 
-public class MongoDLock implements DLock {
-    private ObjectId id;
-    private String owner;
-    private Date acquiredAt;
-    private Date renewedAt;
+public class MongoDLock {
+    private final ObjectId id;
+    private final String lockId;
+    private final String owner;
+    private final Date acquiredAt;
+    private final Date renewedAt;
 
-    public MongoDLock(ObjectId id, String owner, Date acquiredAt, Date renewedAt) {
-        this.id = id;
+    public MongoDLock(String lockId, String owner, Date acquiredAt, Date renewedAt) {
+        this.id = new ObjectId();
+        this.lockId = lockId;
         this.owner = owner;
         this.acquiredAt = acquiredAt;
-        this.renewedAt = renewedAt;
-    }
-
-    public String getOwner() {
-        return owner;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
-    public Date getAcquiredAt() {
-        return acquiredAt;
-    }
-
-    public void setAcquiredAt(Date acquiredAt) {
-        this.acquiredAt = acquiredAt;
-    }
-
-    public Date getRenewedAt() {
-        return renewedAt;
-    }
-
-    public void setRenewedAt(Date renewedAt) {
         this.renewedAt = renewedAt;
     }
 
@@ -46,17 +23,19 @@ public class MongoDLock implements DLock {
         return id;
     }
 
-    public void setId(ObjectId id) {
-        this.id = id;
+    public String getLockId() {
+        return lockId;
     }
 
-    @Override
-    public void release() {
-
+    public String getOwner() {
+        return owner;
     }
 
-    @Override
-    public void renew(Duration duration) {
+    public Date getAcquiredAt() {
+        return acquiredAt;
+    }
 
+    public Date getRenewedAt() {
+        return renewedAt;
     }
 }

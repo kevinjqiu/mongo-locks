@@ -1,5 +1,9 @@
 package io.idempotent.dlocks;
 
-public interface DLockManager<T extends DLock> {
-    T tryAcquire(String lockId);
+import java.time.Duration;
+
+public interface DLockManager {
+    boolean tryAcquire(String lockId);
+    void renew(Duration duration);
+    void release();
 }
