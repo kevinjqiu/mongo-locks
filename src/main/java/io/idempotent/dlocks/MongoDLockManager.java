@@ -1,16 +1,13 @@
 package io.idempotent.dlocks;
 
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.ReadConcern;
-import com.mongodb.WriteConcern;
+import com.mongodb.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.IndexOptions;
-import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.*;
 import com.mongodb.client.result.InsertOneResult;
+import org.bson.*;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 
@@ -23,7 +20,6 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
 public class MongoDLockManager implements DLockManager, AutoCloseable {
     private final MongoClient mongoClient;
-    private final MongoDatabase db;
     private final MongoCollection<MongoDLock> coll;
     private final String ownerId;
 
@@ -34,7 +30,7 @@ public class MongoDLockManager implements DLockManager, AutoCloseable {
                 .codecRegistry(pojoCodecRegistry)
                 .applyConnectionString(new ConnectionString(mongoConnectionStr)).build();
         mongoClient = MongoClients.create(settings);
-        db = mongoClient.getDatabase(dbName);
+        MongoDatabase db = mongoClient.getDatabase(dbName);
         coll = db.withReadConcern(ReadConcern.LINEARIZABLE)
                 .withWriteConcern(WriteConcern.MAJORITY)
                 .getCollection(collName, MongoDLock.class);
@@ -46,24 +42,35 @@ public class MongoDLockManager implements DLockManager, AutoCloseable {
     private void ensureIndex() {
         IndexOptions options = new IndexOptions();
         options.expireAfter(10L, TimeUnit.MINUTES);
-        coll.createIndex(Indexes.ascending("renewedAt"), options);
+        options.unique(true);
+        BsonDocument index = new BsonDocument()
+                .append("lockId", new BsonInt32(1));
+
+        coll.createIndex(index, options);
     }
 
     public boolean tryAcquire(String lockId) {
         Date now = new Date();
+
         MongoDLock lockDoc = new MongoDLock(lockId, ownerId, now, now);
-
-        InsertOneResult result = coll.insertOne(lockDoc);
-        return result.wasAcknowledged();
+        try {
+            InsertOneResult result = coll.insertOne(lockDoc);
+            return result.wasAcknowledged();
+        } catch (com.mongodb.MongoWriteException e) {
+            if (e.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY)) {
+                System.out.println("Unable to acquire lock");
+            }
+            return false;
+        }
     }
 
     @Override
-    public void renew(Duration duration) {
+    public void renew(String lockId, Duration duration) {
 
     }
 
     @Override
-    public void release() {
+    public void release(String lockId) {
 
     }
 

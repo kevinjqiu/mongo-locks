@@ -4,28 +4,32 @@
 
 ```
 {
-    _id: LOCK_ID,
+    lockId: "LOCK_ID",
     owner: "OWNER_ID",
-    updated: "2020-01-01T00:00:00.000Z"
+    acquiredAt: "2020-01-01T00:00:00.000Z",
+    renewedAt: "..."
 }
 ```
 
 
 ## Operations
 
-### `lock`
+### `tryAcquire(String lockId)`
+
+### `acquire(String lockId)`
 
 ```
-lock("abc")
+e.g., lock("abc")
 ```
 
 Inserts a record
 
 ```
 {
-    _id: "abc",
+    lockId: "abc",
     owner: "owner_1",
-    updated: NOW()
+    acquiredAt: NOW(),
+    renewedAt: NOW()
 }
 ```
 
@@ -34,5 +38,5 @@ Inserts a record
 ```
 unlock("abc")
 ```
-if is owner, delete the record with `_id="abc"`
+if is owner, delete the record with `lockId=abc and owner=owner_1"`
 

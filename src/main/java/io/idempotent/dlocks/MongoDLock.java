@@ -1,5 +1,7 @@
 package io.idempotent.dlocks;
 
+import org.bson.codecs.pojo.annotations.BsonCreator;
+import org.bson.codecs.pojo.annotations.BsonProperty;
 import org.bson.types.ObjectId;
 
 import java.util.Date;
@@ -11,7 +13,11 @@ public class MongoDLock {
     private final Date acquiredAt;
     private final Date renewedAt;
 
-    public MongoDLock(String lockId, String owner, Date acquiredAt, Date renewedAt) {
+    @BsonCreator
+    public MongoDLock(@BsonProperty("lockId") final String lockId,
+                      @BsonProperty("owner") final String owner,
+                      @BsonProperty("acquiredAt") final Date acquiredAt,
+                      @BsonProperty("renewedAt") final Date renewedAt) {
         this.id = new ObjectId();
         this.lockId = lockId;
         this.owner = owner;
