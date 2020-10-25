@@ -5,11 +5,15 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.*;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
-import org.bson.*;
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonString;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
+import org.bson.conversions.Bson;
 
 import java.time.Duration;
 import java.util.Date;
@@ -71,11 +75,14 @@ public class MongoDLockManager implements DLockManager, AutoCloseable {
 
     @Override
     public void release(String lockId) {
-
+        Bson filter = new BsonDocument()
+                .append("lockId", new BsonString(lockId))
+                .append("owner", new BsonString(ownerId));
+        coll.deleteMany(filter);
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         mongoClient.close();
     }
 }
