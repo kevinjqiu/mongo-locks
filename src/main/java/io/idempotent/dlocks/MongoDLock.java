@@ -1,47 +1,62 @@
 package io.idempotent.dlocks;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.IndexOptions;
-import com.mongodb.client.model.Indexes;
+import org.bson.types.ObjectId;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
+import java.util.Date;
 
-public class MongoDLock implements DLock, AutoCloseable {
-    private final MongoClient mongoClient;
-    private final MongoDatabase db;
-    private final MongoCollection<MongoDLockDoc> coll;
+public class MongoDLock implements DLock {
+    private ObjectId id;
+    private String owner;
+    private Date acquiredAt;
+    private Date renewedAt;
 
-    public MongoDLock(String mongoConnectionStr, String dbName, String collName) {
-        mongoClient = MongoClients.create(mongoConnectionStr);
-        db = mongoClient.getDatabase(dbName);
-        coll = db.getCollection(collName, MongoDLockDoc.class);
-        ensureIndex();
+    public MongoDLock(ObjectId id, String owner, Date acquiredAt, Date renewedAt) {
+        this.id = id;
+        this.owner = owner;
+        this.acquiredAt = acquiredAt;
+        this.renewedAt = renewedAt;
     }
 
-    private void ensureIndex() {
-        IndexOptions options = new IndexOptions();
-        options.expireAfter(10L, TimeUnit.MINUTES);
-        coll.createIndex(Indexes.ascending("renewedAt"), options);
+    public String getOwner() {
+        return owner;
     }
 
-    public boolean tryAcquire() {
-        return false;
+    public void setOwner(String owner) {
+        this.owner = owner;
     }
 
-    public void renew(Duration duration) {
-
+    public Date getAcquiredAt() {
+        return acquiredAt;
     }
 
+    public void setAcquiredAt(Date acquiredAt) {
+        this.acquiredAt = acquiredAt;
+    }
+
+    public Date getRenewedAt() {
+        return renewedAt;
+    }
+
+    public void setRenewedAt(Date renewedAt) {
+        this.renewedAt = renewedAt;
+    }
+
+    public ObjectId getId() {
+        return id;
+    }
+
+    public void setId(ObjectId id) {
+        this.id = id;
+    }
+
+    @Override
     public void release() {
 
     }
 
     @Override
-    public void close() throws Exception {
-        mongoClient.close();
+    public void renew(Duration duration) {
+
     }
 }
