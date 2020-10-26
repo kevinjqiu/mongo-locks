@@ -3,7 +3,6 @@ package io.idempotent.dlocks
 import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClients
-import junit.framework.TestCase
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -24,15 +23,17 @@ class MongoDLockManagerTest {
 
     @Test
     fun cannotAcquireLockAfterLocked() {
-        TestCase.assertTrue(lm1!!.tryAcquire("foobar"))
-        Assert.assertFalse(lm2!!.tryAcquire("foobar"))
+        Assert.assertTrue(lm1!!.tryAcquire("foobar"))
+        Assert.assertThrows(AlreadyLocked::class.java) {
+            lm1!!.tryAcquire("foobar")
+        }
     }
 
     @Test
     fun acquireAfterRelease() {
-        TestCase.assertTrue(lm1!!.tryAcquire("foobar"))
+        Assert.assertTrue(lm1!!.tryAcquire("foobar"))
         lm1!!.release("foobar")
-        TestCase.assertTrue(lm2!!.tryAcquire("foobar"))
+        Assert.assertTrue(lm2!!.tryAcquire("foobar"))
     }
 
     companion object {

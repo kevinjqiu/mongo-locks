@@ -5,6 +5,7 @@ import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.InsertOneOptions
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
@@ -15,7 +16,7 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class MongoDLockManager(mongoConnectionStr: String?, dbName: String?, collName: String?, ownerId: String) : DLockManager, AutoCloseable {
+class MongoDLockManager(mongoConnectionStr: String, dbName: String, collName: String, ownerId: String) : DLockManager, AutoCloseable {
     private val mongoClient: MongoClient
     private val coll: MongoCollection<MongoDLock>
     private val ownerId: String
@@ -30,15 +31,15 @@ class MongoDLockManager(mongoConnectionStr: String?, dbName: String?, collName: 
 
     override fun tryAcquire(lockId: String): Boolean {
         val now = Date()
-        val lockDoc = MongoDLock(lockId, ownerId, now, now)
+        val lockDoc = MongoDLock(lockId, ownerId, now, now, now)
         return try {
             val result = coll.insertOne(lockDoc)
             result.wasAcknowledged()
         } catch (e: MongoWriteException) {
             if (e.error.category == ErrorCategory.DUPLICATE_KEY) {
-                println("Unable to acquire lock")
+                throw AlreadyLocked()
             }
-            false
+            throw AcquireLockException(e)
         }
     }
 
